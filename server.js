@@ -128,7 +128,6 @@ app.post('/simulate-firs', async (req, res) => {
 });
 
 // -- 🔍 View Invoice from QR --
-const { parseStringPromise } = require('xml2js');
 
 app.get('/invoice/view/:irn', async (req, res) => {
   const { irn } = req.params;
