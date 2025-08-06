@@ -1,0 +1,13 @@
+<Invoice xmlns="urn:oasis:names:specification:ubl:schema:xsd:Invoice-2">
+  <ID>{{irn}}</ID>
+  <IssueDate>{{issue_date}}</IssueDate>
+  <AccountingSupplierParty>
+    <PartyName>{{supplier_name}}</PartyName>
+    <TIN>{{supplier_tin}}</TIN>
+  </AccountingSupplierParty>
+  <AccountingCustomerParty>
+    <PartyName>{{customer_name}}</PartyName>
+    <TIN>{{customer_tin}}</TIN>
+  </AccountingCustomerParty>
+  <PayableAmount currencyID="NGN">{{payable_amount}}</PayableAmount>
+</Invoice>

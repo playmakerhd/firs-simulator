@@ -1,0 +1,21 @@
+{
+  "name": "invoice-firs-simulator",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "body-parser": "^2.2.0",
+    "express": "^5.1.0",
+    "fs": "^0.0.1-security",
+    "qrcode": "^1.5.4",
+    "xml-crypto": "^1.5.3",
+    "xmldom": "^0.6.0"
+  }
+}
