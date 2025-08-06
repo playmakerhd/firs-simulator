@@ -152,6 +152,8 @@ app.get('/invoice/view/:irn', async (req, res) => {
       ? inv['cac:InvoiceLine']
       : [inv['cac:InvoiceLine']];
 
+const invoiceLines = parsed['Invoice']?.['cac:InvoiceLine'] || [];
+
     const lineRows = invoiceLines.map((line) => {
   return `
     <tr>
