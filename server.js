@@ -128,6 +128,8 @@ app.post('/simulate-firs', async (req, res) => {
 });
 
 // -- 🔍 View Invoice from QR --
+const { parseStringPromise } = require('xml2js');
+
 app.get('/invoice/view/:irn', async (req, res) => {
   const { irn } = req.params;
   const invoice = invoiceStore[irn];
@@ -136,43 +138,62 @@ app.get('/invoice/view/:irn', async (req, res) => {
     return res.status(404).send('Invoice not found');
   }
 
-  // 🔁 Only require xml2js when needed (avoids crash if it's not yet installed)
-  let parseStringPromise;
   try {
-    ({ parseStringPromise } = require('xml2js'));
-  } catch (e) {
-    console.error('❌ xml2js is not installed. Please run: npm install xml2js');
-    return res.status(500).send('Server misconfigured: xml2js missing');
-  }
+    const parsed = await parseStringPromise(invoice.signedXml, {
+      explicitArray: false,
+      ignoreAttrs: false
+    });
 
-  // Convert XML to JSON
-  try {
-    const parsed = await parseStringPromise(invoice.signedXml, { explicitArray: false });
+    const invoiceData = parsed['Invoice'] || {};
 
-    res.send(`
+    const html = `
       <html>
         <head>
-          <title>Invoice View - ${irn}</title>
+          <title>Invoice: ${irn}</title>
           <style>
-            body { font-family: sans-serif; padding: 40px; }
-            pre { background: #f9f9f9; padding: 16px; border: 1px solid #ddd; overflow: auto; }
+            body { font-family: Arial; padding: 20px; background: #f5f5f5; }
+            h1 { color: #003366; }
+            .section { margin-bottom: 20px; padding: 10px; background: #fff; border-radius: 5px; }
+            .label { font-weight: bold; }
           </style>
         </head>
         <body>
-          <h1>Signed Invoice: ${irn}</h1>
-          <pre>${JSON.stringify(parsed, null, 2)}</pre>
-          <a href="data:text/xml;charset=utf-8,${encodeURIComponent(invoice.signedXml)}"
-             download="${irn}.xml">
-            ⬇ Download XML
-          </a>
+          <h1>Invoice: ${irn}</h1>
+          <div class="section">
+            <div><span class="label">Issue Date:</span> ${invoiceData.IssueDate || ''}</div>
+            <div><span class="label">Due Date:</span> ${invoiceData.DueDate || ''}</div>
+            <div><span class="label">Invoice Type:</span> ${invoiceData.InvoiceTypeCode || ''}</div>
+            <div><span class="label">Currency:</span> ${invoiceData.DocumentCurrencyCode || ''}</div>
+          </div>
+
+          <div class="section">
+            <h3>Supplier</h3>
+            <div><span class="label">Name:</span> ${invoiceData.AccountingSupplierParty?.Party?.PartyName?.Name || ''}</div>
+            <div><span class="label">TIN:</span> ${invoiceData.AccountingSupplierParty?.Party?.PartyIdentification?.ID || ''}</div>
+          </div>
+
+          <div class="section">
+            <h3>Customer</h3>
+            <div><span class="label">Name:</span> ${invoiceData.AccountingCustomerParty?.Party?.PartyName?.Name || ''}</div>
+            <div><span class="label">TIN:</span> ${invoiceData.AccountingCustomerParty?.Party?.PartyIdentification?.ID || ''}</div>
+          </div>
+
+          <div class="section">
+            <h3>Summary</h3>
+            <div><span class="label">Payable Amount:</span> ${invoiceData.LegalMonetaryTotal?.PayableAmount?._ || ''} ${invoiceData.LegalMonetaryTotal?.PayableAmount?.$.currencyID || ''}</div>
+          </div>
+
         </body>
       </html>
-    `);
+    `;
+
+    res.send(html);
   } catch (err) {
-    console.error('❌ Failed to parse signed XML:', err.message);
-    return res.status(500).send('Could not parse signed XML');
+    console.error('❌ XML Parsing Error:', err.message);
+    res.status(500).send('Error rendering invoice');
   }
 });
+
 
 
 // -- 🚀 Start Server --
