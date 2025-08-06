@@ -14,7 +14,6 @@
     "body-parser": "^2.2.0",
     "express": "^5.1.0",
     "fs": "^0.0.1-security",
-    "pg": "^8.16.3",
     "qrcode": "^1.5.4",
     "xml-crypto": "^1.5.3",
     "xmldom": "^0.6.0"
