@@ -154,14 +154,14 @@ app.get('/invoice/view/:irn', async (req, res) => {
 
     const lineRows = lines.map((line) => {
       const item = line['cac:Item'];
-      const price = line['cac:Price'];
+      const price = line['cac:Price']?.[0];
       return `
         <tr>
           <td>${item?.['cbc:Name']}</td>
           <td>${item?.['cbc:Description']}</td>
           <td>${line?.['cbc:InvoicedQuantity']}</td>
-          <td>${price?.['cbc:PriceAmount']}</td>
-          <td>${line?.['cbc:LineExtensionAmount']}</td>
+        <td>${price?.['cbc:PriceAmount']?.[0]?._ || ''} ${price?.['cbc:PriceAmount']?.[0]?.$?.currencyID || ''}</td>
+      <td>${line['cbc:LineExtensionAmount']?.[0]?._ || ''} ${line['cbc:LineExtensionAmount']?.[0]?.$?.currencyID || ''}</td>
         </tr>`;
     }).join('');
 
