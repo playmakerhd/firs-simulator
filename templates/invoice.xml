@@ -1,34 +1,64 @@
-<Invoice xmlns="urn:oasis:names:specification:ubl:schema:xsd:Invoice-2">
+<Invoice xmlns="urn:oasis:names:specification:ubl:schema:xsd:Invoice-2"
+         xmlns:cac="urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2"
+         xmlns:cbc="urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2">
+
   <cbc:ID>{{irn}}</cbc:ID>
   <cbc:IssueDate>{{issue_date}}</cbc:IssueDate>
+  <cbc:DueDate>{{due_date}}</cbc:DueDate>
+  <cbc:InvoiceTypeCode>{{invoice_type_code}}</cbc:InvoiceTypeCode>
+  <cbc:DocumentCurrencyCode>{{document_currency_code}}</cbc:DocumentCurrencyCode>
 
   <cac:AccountingSupplierParty>
     <cac:Party>
-      <cbc:Name>{{supplier_name}}</cbc:Name>
-      <cbc:CompanyID>{{supplier_tin}}</cbc:CompanyID>
+      <cbc:Name>{{accounting_supplier_party.party_name}}</cbc:Name>
+      <cbc:CompanyID>{{accounting_supplier_party.tin}}</cbc:CompanyID>
+      <cbc:Email>{{accounting_supplier_party.email}}</cbc:Email>
+      <cac:PostalAddress>
+        <cbc:StreetName>{{accounting_supplier_party.postal_address.street_name}}</cbc:StreetName>
+        <cbc:CityName>{{accounting_supplier_party.postal_address.city_name}}</cbc:CityName>
+        <cbc:PostalZone>{{accounting_supplier_party.postal_address.postal_zone}}</cbc:PostalZone>
+        <cbc:Country>{{accounting_supplier_party.postal_address.country}}</cbc:Country>
+      </cac:PostalAddress>
     </cac:Party>
   </cac:AccountingSupplierParty>
 
   <cac:AccountingCustomerParty>
     <cac:Party>
-      <cbc:Name>{{customer_name}}</cbc:Name>
-      <cbc:CompanyID>{{customer_tin}}</cbc:CompanyID>
+      <cbc:Name>{{accounting_customer_party.party_name}}</cbc:Name>
+      <cbc:CompanyID>{{accounting_customer_party.tin}}</cbc:CompanyID>
+      <cbc:Email>{{accounting_customer_party.email}}</cbc:Email>
+      <cac:PostalAddress>
+        <cbc:StreetName>{{accounting_customer_party.postal_address.street_name}}</cbc:StreetName>
+        <cbc:CityName>{{accounting_customer_party.postal_address.city_name}}</cbc:CityName>
+        <cbc:PostalZone>{{accounting_customer_party.postal_address.postal_zone}}</cbc:PostalZone>
+        <cbc:Country>{{accounting_customer_party.postal_address.country}}</cbc:Country>
+      </cac:PostalAddress>
     </cac:Party>
   </cac:AccountingCustomerParty>
 
   <cac:LegalMonetaryTotal>
-    <cbc:PayableAmount currencyID="NGN">{{payable_amount}}</cbc:PayableAmount>
+    <cbc:LineExtensionAmount currencyID="NGN">{{legal_monetary_total.line_extension_amount}}</cbc:LineExtensionAmount>
+    <cbc:TaxExclusiveAmount currencyID="NGN">{{legal_monetary_total.tax_exclusive_amount}}</cbc:TaxExclusiveAmount>
+    <cbc:TaxInclusiveAmount currencyID="NGN">{{legal_monetary_total.tax_inclusive_amount}}</cbc:TaxInclusiveAmount>
+    <cbc:PayableAmount currencyID="NGN">{{legal_monetary_total.payable_amount}}</cbc:PayableAmount>
   </cac:LegalMonetaryTotal>
 
+  {{#each invoice_line}}
   <cac:InvoiceLine>
-    <cbc:ID>1</cbc:ID>
-    <cbc:InvoicedQuantity>{{invoice_line[0].invoiced_quantity}}</cbc:InvoicedQuantity>
-    <cbc:LineExtensionAmount currencyID="NGN">{{invoice_line[0].line_extension_amount}}</cbc:LineExtensionAmount>
+    <cbc:ID>{{@index}}</cbc:ID>
+    <cbc:InvoicedQuantity>{{invoiced_quantity}}</cbc:InvoicedQuantity>
+    <cbc:LineExtensionAmount currencyID="NGN">{{line_extension_amount}}</cbc:LineExtensionAmount>
     <cac:Item>
-      <cbc:Name>{{invoice_line[0].item.name}}</cbc:Name>
+      <cbc:Name>{{item.name}}</cbc:Name>
+      <cbc:Description>{{item.description}}</cbc:Description>
+      <cbc:SellersItemIdentification>{{item.sellers_item_identification}}</cbc:SellersItemIdentification>
     </cac:Item>
     <cac:Price>
-      <cbc:PriceAmount currencyID="NGN">{{invoice_line[0].price.price_amount}}</cbc:PriceAmount>
+      <cbc:PriceAmount currencyID="NGN">{{price.price_amount}}</cbc:PriceAmount>
+      <cbc:BaseQuantity>{{price.base_quantity}}</cbc:BaseQuantity>
+      <cbc:PriceUnit>{{price.price_unit}}</cbc:PriceUnit>
     </cac:Price>
   </cac:InvoiceLine>
+  {{/each}}
+
 </Invoice>
