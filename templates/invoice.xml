@@ -1,13 +1,34 @@
 <Invoice xmlns="urn:oasis:names:specification:ubl:schema:xsd:Invoice-2">
-  <ID>{{irn}}</ID>
-  <IssueDate>{{issue_date}}</IssueDate>
-  <AccountingSupplierParty>
-    <PartyName>{{supplier_name}}</PartyName>
-    <TIN>{{supplier_tin}}</TIN>
-  </AccountingSupplierParty>
-  <AccountingCustomerParty>
-    <PartyName>{{customer_name}}</PartyName>
-    <TIN>{{customer_tin}}</TIN>
-  </AccountingCustomerParty>
-  <PayableAmount currencyID="NGN">{{payable_amount}}</PayableAmount>
+  <cbc:ID>{{irn}}</cbc:ID>
+  <cbc:IssueDate>{{issue_date}}</cbc:IssueDate>
+
+  <cac:AccountingSupplierParty>
+    <cac:Party>
+      <cbc:Name>{{supplier_name}}</cbc:Name>
+      <cbc:CompanyID>{{supplier_tin}}</cbc:CompanyID>
+    </cac:Party>
+  </cac:AccountingSupplierParty>
+
+  <cac:AccountingCustomerParty>
+    <cac:Party>
+      <cbc:Name>{{customer_name}}</cbc:Name>
+      <cbc:CompanyID>{{customer_tin}}</cbc:CompanyID>
+    </cac:Party>
+  </cac:AccountingCustomerParty>
+
+  <cac:LegalMonetaryTotal>
+    <cbc:PayableAmount currencyID="NGN">{{payable_amount}}</cbc:PayableAmount>
+  </cac:LegalMonetaryTotal>
+
+  <cac:InvoiceLine>
+    <cbc:ID>1</cbc:ID>
+    <cbc:InvoicedQuantity>{{invoice_line[0].invoiced_quantity}}</cbc:InvoicedQuantity>
+    <cbc:LineExtensionAmount currencyID="NGN">{{invoice_line[0].line_extension_amount}}</cbc:LineExtensionAmount>
+    <cac:Item>
+      <cbc:Name>{{invoice_line[0].item.name}}</cbc:Name>
+    </cac:Item>
+    <cac:Price>
+      <cbc:PriceAmount currencyID="NGN">{{invoice_line[0].price.price_amount}}</cbc:PriceAmount>
+    </cac:Price>
+  </cac:InvoiceLine>
 </Invoice>
