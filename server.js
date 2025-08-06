@@ -129,6 +129,7 @@ app.post('/simulate-firs', async (req, res) => {
 
 // -- 🔍 View Invoice from QR --
 
+// -- 🔍 View Invoice from QR --
 app.get('/invoice/view/:irn', async (req, res) => {
   const { irn } = req.params;
   const invoice = invoiceStore[irn];
@@ -137,61 +138,46 @@ app.get('/invoice/view/:irn', async (req, res) => {
     return res.status(404).send('Invoice not found');
   }
 
+  const xml = invoice.signedXml;
+
   try {
-    const parsed = await parseStringPromise(invoice.signedXml, {
+    const parsed = await parseStringPromise(xml, {
       explicitArray: false,
-      ignoreAttrs: false
+      mergeAttrs: true,
     });
 
-    const invoiceData = parsed['Invoice'] || {};
+    // Assuming the Invoice node is under this path
+    const invoiceData = parsed['Invoice'] || parsed['cbc:Invoice'];
 
-    const html = `
-      <html>
-        <head>
-          <title>Invoice: ${irn}</title>
-          <style>
-            body { font-family: Arial; padding: 20px; background: #f5f5f5; }
-            h1 { color: #003366; }
-            .section { margin-bottom: 20px; padding: 10px; background: #fff; border-radius: 5px; }
-            .label { font-weight: bold; }
-          </style>
-        </head>
-        <body>
-          <h1>Invoice: ${irn}</h1>
-          <div class="section">
-            <div><span class="label">Issue Date:</span> ${invoiceData.IssueDate || ''}</div>
-            <div><span class="label">Due Date:</span> ${invoiceData.DueDate || ''}</div>
-            <div><span class="label">Invoice Type:</span> ${invoiceData.InvoiceTypeCode || ''}</div>
-            <div><span class="label">Currency:</span> ${invoiceData.DocumentCurrencyCode || ''}</div>
-          </div>
+    if (!invoiceData) {
+      return res.status(500).send('Failed to parse invoice');
+    }
 
-          <div class="section">
-            <h3>Supplier</h3>
-            <div><span class="label">Name:</span> ${invoiceData.AccountingSupplierParty?.Party?.PartyName?.Name || ''}</div>
-            <div><span class="label">TIN:</span> ${invoiceData.AccountingSupplierParty?.Party?.PartyIdentification?.ID || ''}</div>
-          </div>
+    // Generate a simple HTML view
+    let html = `<html><head><title>Invoice ${irn}</title></head><body>`;
+    html += `<h1>Invoice #${irn}</h1>`;
+    html += `<ul>`;
 
-          <div class="section">
-            <h3>Customer</h3>
-            <div><span class="label">Name:</span> ${invoiceData.AccountingCustomerParty?.Party?.PartyName?.Name || ''}</div>
-            <div><span class="label">TIN:</span> ${invoiceData.AccountingCustomerParty?.Party?.PartyIdentification?.ID || ''}</div>
-          </div>
+    Object.entries(invoiceData).forEach(([key, value]) => {
+      if (typeof value === 'object') {
+        html += `<li><strong>${key}:</strong><ul>`;
+        Object.entries(value).forEach(([subKey, subVal]) => {
+          html += `<li>${subKey}: ${JSON.stringify(subVal)}</li>`;
+        });
+        html += `</ul></li>`;
+      } else {
+        html += `<li><strong>${key}:</strong> ${value}</li>`;
+      }
+    });
 
-          <div class="section">
-            <h3>Summary</h3>
-            <div><span class="label">Payable Amount:</span> ${invoiceData.LegalMonetaryTotal?.PayableAmount?._ || ''} ${invoiceData.LegalMonetaryTotal?.PayableAmount?.$.currencyID || ''}</div>
-          </div>
-
-        </body>
-      </html>
-    `;
-
+    html += `</ul></body></html>`;
     res.send(html);
   } catch (err) {
-    console.error('❌ XML Parsing Error:', err.message);
-    res.status(500).send('Error rendering invoice');
+    console.error('❌ XML Parse Error:', err);
+    res.status(500).send('Failed to render invoice');
   }
 });
+
 
 
 
