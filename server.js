@@ -152,18 +152,24 @@ app.get('/invoice/view/:irn', async (req, res) => {
       ? inv['cac:InvoiceLine']
       : [inv['cac:InvoiceLine']];
 
-    const lineRows = lines.map((line) => {
-      const item = line['cac:Item'];
-      const price = line['cac:Price'];
-      return `
-        <tr>
-          <td>${item?.['cbc:Name']}</td>
-          <td>${item?.['cbc:Description']}</td>
-          <td>${line?.['cbc:InvoicedQuantity']}</td>
-          <td>${price?.['cbc:PriceAmount']}</td>
-          <td>${line?.['cbc:LineExtensionAmount']}</td>
-        </tr>`;
-    }).join('');
+    const lineRows = invoiceLines.map((line) => {
+  return `
+    <tr>
+      <td>${line['cac:Item']?.['cbc:Name'] || ''}</td>
+      <td>${line['cac:Item']?.['cbc:Description'] || ''}</td>
+      <td>${line['cbc:InvoicedQuantity'] || ''}</td>
+      <td>
+        ${line['cac:Price']?.['cbc:PriceAmount']?._ || ''} 
+        ${line['cac:Price']?.['cbc:PriceAmount']?.$.currencyID || ''}
+      </td>
+      <td>
+        ${line['cbc:LineExtensionAmount']?._ || ''} 
+        ${line['cbc:LineExtensionAmount']?.$.currencyID || ''}
+      </td>
+    </tr>
+  `;
+}).join('');
+
 
     const html = `
       <html>
