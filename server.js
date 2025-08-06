@@ -134,9 +134,7 @@ app.get('/invoice/view/:irn', async (req, res) => {
   const { irn } = req.params;
   const invoice = invoiceStore[irn];
 
-  if (!invoice) {
-    return res.status(404).send('Invoice not found');
-  }
+  if (!invoice) return res.status(404).send('Invoice not found');
 
   const xml = invoice.signedXml;
 
@@ -146,37 +144,87 @@ app.get('/invoice/view/:irn', async (req, res) => {
       mergeAttrs: true,
     });
 
-    // Assuming the Invoice node is under this path
-    const invoiceData = parsed['Invoice'] || parsed['cbc:Invoice'];
+    const inv = parsed['Invoice'];
+    const supplier = inv['cac:AccountingSupplierParty']?.['cac:Party'];
+    const customer = inv['cac:AccountingCustomerParty']?.['cac:Party'];
+    const totals = inv['cac:LegalMonetaryTotal'];
+    const lines = Array.isArray(inv['cac:InvoiceLine'])
+      ? inv['cac:InvoiceLine']
+      : [inv['cac:InvoiceLine']];
 
-    if (!invoiceData) {
-      return res.status(500).send('Failed to parse invoice');
-    }
+    const lineRows = lines.map((line) => {
+      const item = line['cac:Item'];
+      const price = line['cac:Price'];
+      return `
+        <tr>
+          <td>${item?.['cbc:Name']}</td>
+          <td>${item?.['cbc:Description']}</td>
+          <td>${line?.['cbc:InvoicedQuantity']}</td>
+          <td>${price?.['cbc:PriceAmount']}</td>
+          <td>${line?.['cbc:LineExtensionAmount']}</td>
+        </tr>`;
+    }).join('');
 
-    // Generate a simple HTML view
-    let html = `<html><head><title>Invoice ${irn}</title></head><body>`;
-    html += `<h1>Invoice #${irn}</h1>`;
-    html += `<ul>`;
+    const html = `
+      <html>
+      <head>
+        <title>Invoice ${irn}</title>
+        <style>
+          body { font-family: Arial; padding: 20px; line-height: 1.6; }
+          h2 { border-bottom: 1px solid #ccc; }
+          table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+          th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+          th { background-color: #f4f4f4; }
+        </style>
+      </head>
+      <body>
+        <h1>Invoice #${irn}</h1>
 
-    Object.entries(invoiceData).forEach(([key, value]) => {
-      if (typeof value === 'object') {
-        html += `<li><strong>${key}:</strong><ul>`;
-        Object.entries(value).forEach(([subKey, subVal]) => {
-          html += `<li>${subKey}: ${JSON.stringify(subVal)}</li>`;
-        });
-        html += `</ul></li>`;
-      } else {
-        html += `<li><strong>${key}:</strong> ${value}</li>`;
-      }
-    });
+        <h2>Supplier</h2>
+        <p><strong>Name:</strong> ${supplier?.['cbc:Name']}</p>
+        <p><strong>TIN:</strong> ${supplier?.['cbc:CompanyID']}</p>
+        <p><strong>Email:</strong> ${supplier?.['cbc:Email']}</p>
 
-    html += `</ul></body></html>`;
+        <h2>Customer</h2>
+        <p><strong>Name:</strong> ${customer?.['cbc:Name']}</p>
+        <p><strong>TIN:</strong> ${customer?.['cbc:CompanyID']}</p>
+        <p><strong>Email:</strong> ${customer?.['cbc:Email']}</p>
+
+        <h2>Invoice Details</h2>
+        <p><strong>Issue Date:</strong> ${inv['cbc:IssueDate']}</p>
+        <p><strong>Due Date:</strong> ${inv['cbc:DueDate']}</p>
+        <p><strong>Currency:</strong> ${inv['cbc:DocumentCurrencyCode']}</p>
+
+        <h2>Items</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Description</th>
+              <th>Qty</th>
+              <th>Price</th>
+              <th>Total</th>
+            </tr>
+          </thead>
+          <tbody>${lineRows}</tbody>
+        </table>
+
+        <h2>Totals</h2>
+        <p><strong>Line Extension:</strong> ${totals?.['cbc:LineExtensionAmount']?._}</p>
+        <p><strong>Tax Exclusive:</strong> ${totals?.['cbc:TaxExclusiveAmount']?._}</p>
+        <p><strong>Tax Inclusive:</strong> ${totals?.['cbc:TaxInclusiveAmount']?._}</p>
+        <p><strong>Payable:</strong> ${totals?.['cbc:PayableAmount']?._}</p>
+      </body>
+      </html>
+    `;
+
     res.send(html);
   } catch (err) {
     console.error('❌ XML Parse Error:', err);
     res.status(500).send('Failed to render invoice');
   }
 });
+
 
 
 
