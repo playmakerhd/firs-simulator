@@ -77,7 +77,9 @@ function fillTemplate(template, data) {
 function signXml(xml) {
   const sig = new SignedXml();
 
+  // ✅ Add digestAlgorithm explicitly
   sig.signatureAlgorithm = "http://www.w3.org/2001/04/xmldsig-more#rsa-sha256";
+  sig.digestAlgorithm = "http://www.w3.org/2001/04/xmlenc#sha256";
 
   sig.addReference(
     "//*[local-name(.)='Invoice']",
@@ -86,6 +88,7 @@ function signXml(xml) {
   );
 
   sig.signingKey = privateKey;
+
   sig.keyInfoProvider = {
     getKeyInfo: () => "<X509Data></X509Data>"
   };
@@ -93,6 +96,7 @@ function signXml(xml) {
   sig.computeSignature(xml);
   return sig.getSignedXml();
 }
+
 
 // -- 📥 /simulate-firs Endpoint --
 app.post('/simulate-firs', async (req, res) => {
