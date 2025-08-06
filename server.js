@@ -11,25 +11,20 @@ app.use(bodyParser.json());
 
 const PORT = process.env.PORT || 3000;
 
-// Load the XML template
+const invoiceStore = {}; // { [irn]: { signedXml, json, timestamp } }
+
 const templatePath = path.join(__dirname, 'templates', 'invoice.xml');
 const privateKey = fs.readFileSync('./private.pem', 'utf8');
-
-// Replace placeholders like {{irn}} with actual values
-const fs = require('fs');
-const path = require('path');
 
 function fillTemplate(template, data) {
   let output = template;
 
-  // Replace top-level fields
   Object.keys(data).forEach((key) => {
     if (typeof data[key] !== 'object' || data[key] === null) {
       output = output.replaceAll(`{{${key}}}`, data[key]);
     }
   });
 
-  // Replace nested fields (supplier and customer)
   const nestedPaths = [
     'accounting_supplier_party',
     'accounting_customer_party',
@@ -50,7 +45,6 @@ function fillTemplate(template, data) {
     }
   });
 
-  // Handle invoice_line array manually
   const lineTemplateMatch = output.match(/{{#each invoice_line}}([\s\S]*?){{\/each}}/);
   if (lineTemplateMatch) {
     const lineTemplate = lineTemplateMatch[1];
@@ -80,13 +74,8 @@ function fillTemplate(template, data) {
   return output;
 }
 
-module.exports = fillTemplate;
-
-
-// Sign the XML
 function signXml(xml) {
   const sig = new SignedXml();
-
   sig.signatureAlgorithm = "http://www.w3.org/2001/04/xmldsig-more#rsa-sha256";
 
   sig.addReference(
@@ -97,10 +86,9 @@ function signXml(xml) {
 
   sig.signingKey = privateKey;
 
-  // This line is CRITICAL for new xml-crypto versions
   sig.keyInfoProvider = {
     getKeyInfo() {
-      return "<X509Data></X509Data>"; // Optional placeholder
+      return "<X509Data></X509Data>";
     },
   };
 
@@ -108,23 +96,21 @@ function signXml(xml) {
   return sig.getSignedXml();
 }
 
-
-
-
-
-// Route: Simulate FIRS
 app.post('/simulate-firs', async (req, res) => {
   try {
     const data = req.body;
-
     const template = fs.readFileSync(templatePath, 'utf8');
     const filledXml = fillTemplate(template, data);
     const signedXml = signXml(filledXml);
 
-    const invoiceUrl = `https://yourdomain.com/invoice/view/${data.irn}`;
-
-    // For simulation, encode the URL or XML
+    const invoiceUrl = `https://firs-simulator-production.up.railway.app/verify/${data.irn}`;
     const qrCode = await QRCode.toDataURL(invoiceUrl);
+
+    invoiceStore[data.irn] = {
+      signedXml,
+      json: data,
+      timestamp: new Date().toISOString()
+    };
 
     res.json({
       irn: data.irn,
@@ -138,8 +124,52 @@ app.post('/simulate-firs', async (req, res) => {
   }
 });
 
-// Start server
+app.get('/verify/:irn', (req, res) => {
+  const { irn } = req.params;
+  const record = invoiceStore[irn];
+
+  if (!record) {
+    return res.status(404).send(`<h2>Invoice not found ❌</h2>`);
+  }
+
+  const { signedXml, json, timestamp } = record;
+
+  res.send(`
+    <html>
+      <head>
+        <title>Invoice Verification</title>
+        <style>
+          body { font-family: sans-serif; padding: 2rem; background: #f5f5f5; }
+          .card { background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+          .success { color: green; font-size: 1.5rem; font-weight: bold; }
+          .section { margin-top: 1.5rem; }
+        </style>
+      </head>
+      <body>
+        <div class="card">
+          <div class="success">✅ Invoice Verified</div>
+          <div class="section"><strong>IRN:</strong> ${irn}</div>
+          <div class="section"><strong>Issued To:</strong> ${json.accounting_customer_party.party_name}</div>
+          <div class="section"><strong>Supplier:</strong> ${json.accounting_supplier_party.party_name}</div>
+          <div class="section"><strong>Amount:</strong> NGN ${json.legal_monetary_total.payable_amount}</div>
+          <div class="section"><strong>Issue Date:</strong> ${json.issue_date}</div>
+          <div class="section"><strong>Stored:</strong> ${timestamp}</div>
+          <div class="section">
+            <a href="/verify/${irn}/xml" target="_blank">🔍 View Signed XML</a>
+          </div>
+        </div>
+      </body>
+    </html>
+  `);
+});
+
+app.get('/verify/:irn/xml', (req, res) => {
+  const record = invoiceStore[req.params.irn];
+  if (!record) return res.status(404).send('Invoice not found');
+  res.setHeader('Content-Type', 'application/xml');
+  res.send(record.signedXml);
+});
+
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Server running on port ${PORT}`);
 });
-
