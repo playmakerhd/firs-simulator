@@ -157,11 +157,17 @@ const invoiceLines = parsed['Invoice']?.['cac:InvoiceLine'] || [];
 const lineRows = invoiceLines.map((line) => {
   const item = line['cac:Item']?.[0] || {};
   const price = line['cac:Price']?.[0] || {};
-  const quantity = line['cbc:InvoicedQuantity']?.[0] || '';
-  const lineAmount = line['cbc:LineExtensionAmount']?.[0]?._ || line['cbc:LineExtensionAmount']?.[0] || '';
-  const lineCurrency = line['cbc:LineExtensionAmount']?.[0]?.$?.currencyID || '';
-  const priceAmount = price['cbc:PriceAmount']?.[0]?._ || price['cbc:PriceAmount']?.[0] || '';
-  const priceCurrency = price['cbc:PriceAmount']?.[0]?.$?.currencyID || '';
+
+  const quantityObj = line['cbc:InvoicedQuantity']?.[0] || {};
+  const quantity = quantityObj._ || quantityObj;
+
+  const lineAmountObj = line['cbc:LineExtensionAmount']?.[0] || {};
+  const lineAmount = lineAmountObj._ || lineAmountObj;
+  const lineCurrency = lineAmountObj.$?.currencyID || '';
+
+  const priceAmountObj = price['cbc:PriceAmount']?.[0] || {};
+  const priceAmount = priceAmountObj._ || priceAmountObj;
+  const priceCurrency = priceAmountObj.$?.currencyID || '';
 
   return `
     <tr>
@@ -173,6 +179,7 @@ const lineRows = invoiceLines.map((line) => {
     </tr>
   `;
 }).join('');
+
 
 
 
