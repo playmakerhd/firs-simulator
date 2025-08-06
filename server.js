@@ -16,16 +16,72 @@ const templatePath = path.join(__dirname, 'templates', 'invoice.xml');
 const privateKey = fs.readFileSync('./private.pem', 'utf8');
 
 // Replace placeholders like {{irn}} with actual values
+const fs = require('fs');
+const path = require('path');
+
 function fillTemplate(template, data) {
-  return template
-    .replace('{{irn}}', data.irn)
-    .replace('{{issue_date}}', data.issue_date)
-    .replace('{{supplier_name}}', data.accounting_supplier_party.party_name)
-    .replace('{{supplier_tin}}', data.accounting_supplier_party.tin)
-    .replace('{{customer_name}}', data.accounting_customer_party.party_name)
-    .replace('{{customer_tin}}', data.accounting_customer_party.tin)
-    .replace('{{payable_amount}}', data.legal_monetary_total.payable_amount.toString());
+  let output = template;
+
+  // Replace top-level fields
+  Object.keys(data).forEach((key) => {
+    if (typeof data[key] !== 'object' || data[key] === null) {
+      output = output.replaceAll(`{{${key}}}`, data[key]);
+    }
+  });
+
+  // Replace nested fields (supplier and customer)
+  const nestedPaths = [
+    'accounting_supplier_party',
+    'accounting_customer_party',
+    'legal_monetary_total'
+  ];
+
+  nestedPaths.forEach((section) => {
+    if (data[section]) {
+      Object.keys(data[section]).forEach((key) => {
+        if (typeof data[section][key] !== 'object') {
+          output = output.replaceAll(`{{${section}.${key}}}`, data[section][key]);
+        } else {
+          Object.keys(data[section][key]).forEach((subKey) => {
+            output = output.replaceAll(`{{${section}.${key}.${subKey}}}`, data[section][key][subKey]);
+          });
+        }
+      });
+    }
+  });
+
+  // Handle invoice_line array manually
+  const lineTemplateMatch = output.match(/{{#each invoice_line}}([\s\S]*?){{\/each}}/);
+  if (lineTemplateMatch) {
+    const lineTemplate = lineTemplateMatch[1];
+    const invoiceLines = data.invoice_line || [];
+    let fullLineBlock = '';
+
+    invoiceLines.forEach((line, index) => {
+      let renderedLine = lineTemplate;
+      renderedLine = renderedLine.replaceAll('{{@index}}', index + 1);
+
+      Object.keys(line).forEach((lineKey) => {
+        if (typeof line[lineKey] !== 'object') {
+          renderedLine = renderedLine.replaceAll(`{{${lineKey}}}`, line[lineKey]);
+        } else {
+          Object.keys(line[lineKey]).forEach((subKey) => {
+            renderedLine = renderedLine.replaceAll(`{{${lineKey}.${subKey}}}`, line[lineKey][subKey]);
+          });
+        }
+      });
+
+      fullLineBlock += renderedLine;
+    });
+
+    output = output.replace(lineTemplateMatch[0], fullLineBlock);
+  }
+
+  return output;
 }
+
+module.exports = fillTemplate;
+
 
 // Sign the XML
 function signXml(xml) {
