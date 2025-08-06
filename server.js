@@ -6,7 +6,7 @@ const { SignedXml } = require('xml-crypto');
 const { DOMParser } = require('xmldom');
 const QRCode = require('qrcode');
 const { parseStringPromise } = require('xml2js');
-require('dotenv').config();
+
 
 const app = express();
 app.use(bodyParser.json());
