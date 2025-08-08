@@ -6,7 +6,6 @@ const { SignedXml } = require('xml-crypto');
 const { DOMParser } = require('xmldom');
 const QRCode = require('qrcode');
 const { parseStringPromise } = require('xml2js');
-const express   = require('express');   // or `import …` if you're using ESM
 const puppeteer = require('puppeteer');
 const router    = express.Router();
 const app = express();
